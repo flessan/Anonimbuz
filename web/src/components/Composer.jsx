@@ -36,7 +36,7 @@ export function CreatePostBar() {
 }
 
 // 2. ComposerModal Component
-export function ComposerModal({ isOpen, onClose }) {
+export function ComposerModal({ isOpen, onClose, initialContent = '' }) {
   const { user } = useAuth();
   const textareaRef = useRef(null);
 
@@ -81,8 +81,9 @@ export function ComposerModal({ isOpen, onClose }) {
   // ✅ useEffect untuk focus + restore draft
   useEffect(() => {
     if (isOpen) {
-      // Restore draft if content is empty
-      if (!content) {
+      if (initialContent) {
+        setContent(initialContent);
+      } else if (!content) {
         const saved = localStorage.getItem(DRAFT_KEY);
         if (saved) {
           try {
@@ -96,7 +97,7 @@ export function ComposerModal({ isOpen, onClose }) {
       }
       setTimeout(() => textareaRef.current?.focus(), 50);
     }
-  }, [isOpen, DRAFT_KEY]);
+  }, [isOpen, DRAFT_KEY, initialContent]);
 
   // ✅ Auto-save draft on content change (debounced 800ms)
   useEffect(() => {

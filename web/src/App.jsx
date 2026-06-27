@@ -35,6 +35,8 @@ const FollowList = lazy(() => import('./pages/FollowList.jsx'));
 const Bookmarks = lazy(() => import('./pages/Bookmarks.jsx'));
 const BlockedUsers = lazy(() => import('./pages/BlockedUsers.jsx'));
 const About = lazy(() => import('./pages/About.jsx'));
+const Settings = lazy(() => import('./pages/Settings.jsx'));
+const EmbedPost = lazy(() => import('./pages/EmbedPost.jsx'));
 
 // Accent color presets
 const ACCENT_PRESETS = [
@@ -68,19 +70,6 @@ export default function App() {
   // Settings dropdown state
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const settingsRef = useRef(null); // ➕ tambahkan useRef di import
-
-  // Close settings on outside click
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      // Cek apakah klik di luar wrapper settings
-      if (settingsRef.current && !settingsRef.current.contains(e.target)) {
-        setShowSettingsMenu(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   // Theme management
   const [theme, setTheme] = useState(() => localStorage.getItem('anomia_theme') || 'dark');
@@ -146,6 +135,7 @@ export default function App() {
 
   // Global composer modal state
   const [isComposerOpen, setComposerOpen] = useState(false);
+  const [composerInitialContent, setComposerInitialContent] = useState('');
 
   // Declared early so keyboard shortcut hook can reference it
   function handleOpenComposerEarly() {
@@ -157,11 +147,12 @@ export default function App() {
   }
 
   useEffect(() => {
-    const handleOpen = () => {
+    const handleOpen = (e) => {
       if (!user) {
         navigate('/login');
         return;
       }
+      setComposerInitialContent(e?.detail?.initialContent || '');
       setComposerOpen(true);
     };
     window.addEventListener('open-composer-modal', handleOpen);
@@ -230,9 +221,16 @@ export default function App() {
           <span>Anonimbuz</span>
         </Link>
 
-        <button className="top-bar-action" onClick={toggleTheme} title="Ganti Tema">
-          <IconTheme dark={theme === 'dark'} />
-        </button>
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          <button className="top-bar-action" onClick={toggleTheme} title="Ganti Tema">
+            <IconTheme dark={theme === 'dark'} />
+          </button>
+          {user && (
+            <button className="top-bar-action mobile-only" onClick={() => { navigator.vibrate?.(15); navigate('/settings'); }} title="Pengaturan">
+              <IconSettings />
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="app-body">
@@ -275,82 +273,10 @@ export default function App() {
                 <span>Profil</span>
               </Link>
 
-              {/* Settings Menu dengan Dropdown */}
-              {/* Settings Menu dengan Dropdown */}
-              <div className="settings-dropdown-wrapper" ref={settingsRef}>
-                <button
-                  className={`sidebar-link ${showSettingsMenu ? 'active' : ''}`}
-                  onClick={() => setShowSettingsMenu(!showSettingsMenu)}
-                  /* HAPUS onMouseEnter */
-                  style={{
-                    width: '100%',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    position: 'relative'
-                  }}
-                >
-                  <IconSettings />
-                  <span>Pengaturan</span>
-                </button>
-
-                {showSettingsMenu && (
-                  <div
-                    className="settings-dropdown"
-                  /* HAPUS onMouseLeave */
-                  >
-                    <div className="settings-section-label">Warna Aksen</div>
-                    <div className="accent-picker-row">
-                      {ACCENT_PRESETS.map((preset, idx) => (
-                        <button
-                          key={preset.name}
-                          className={`accent-swatch ${accentIndex === idx ? 'active' : ''}`}
-                          style={{ background: preset.dark }}
-                          onClick={() => {
-                            setAccent(idx);
-                            setShowSettingsMenu(false);
-                          }}
-                          title={preset.name}
-                        />
-                      ))}
-                    </div>
-
-                    <div className="settings-divider" />
-
-                    <button
-                      className="settings-menu-item"
-                      onClick={() => {
-                        setShowShortcutsModal(true);
-                        setShowSettingsMenu(false);
-                      }}
-                    >
-                      <span>⌨️</span>
-                      <span>Pintasan Keyboard</span>
-                    </button>
-
-                    <div className="settings-divider" />
-
-                    <Link
-                      to="/settings/blocked"
-                      onClick={() => setShowSettingsMenu(false)}
-                      className="settings-menu-item"
-                    >
-                      <span>🚫</span>
-                      <span>Daftar Diblokir</span>
-                    </Link>
-
-                    <Link
-                      to="/about"
-                      onClick={() => setShowSettingsMenu(false)}
-                      className="settings-menu-item"
-                    >
-                      <span>ℹ️</span>
-                      <span>Tentang Anonimbuz</span>
-                    </Link>
-                  </div>
-                )}
-              </div>
+              <Link to="/settings" className={`sidebar-link ${location.pathname === '/settings' ? 'active' : ''}`}>
+                <IconSettings />
+                <span>Pengaturan</span>
+              </Link>
 
               {user.role === 'dev' && (
                 <Link to="/admin" className={`sidebar-link ${location.pathname === '/admin' ? 'active' : ''}`}>
@@ -399,6 +325,8 @@ export default function App() {
               <Route path="/bookmarks" element={<RequireAuth><Bookmarks /></RequireAuth>} />
               <Route path="/settings/blocked" element={<RequireAuth><BlockedUsers /></RequireAuth>} />
               <Route path="/about" element={<About />} />
+              <Route path="/settings" element={<RequireAuth><Settings theme={theme} toggleTheme={toggleTheme} accentIndex={accentIndex} setAccent={setAccent} presets={ACCENT_PRESETS} onOpenShortcuts={() => setShowShortcutsModal(true)} /></RequireAuth>} />
+              <Route path="/embed/:id" element={<EmbedPost />} />
               <Route path="*" element={<div className="center">404 - Halaman Tidak Ditemukan</div>} />
             </Routes>
           </Suspense>
@@ -451,6 +379,7 @@ export default function App() {
       {user && (
         <ComposerModal
           isOpen={isComposerOpen}
+          initialContent={composerInitialContent}
           onClose={() => setComposerOpen(false)}
         />
       )}

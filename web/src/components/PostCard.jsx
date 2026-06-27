@@ -4,6 +4,7 @@ import { parsePostContent } from '../utils/markdownParser.js';
 import api from '../api';
 import { useAuth } from '../auth.jsx';
 import BadgeRole from './BadgeRole.jsx';
+import LazyImage from './LazyImage.jsx';
 import {
   IconHeart,
   IconComment,
@@ -315,7 +316,7 @@ function EmbedPreview({ url, content }) {
       case 'image':
         return (
           <div className="embed-container image-embed" onClick={(e) => e.stopPropagation()}>
-            <img src={embed.url} alt="Embed" loading="lazy" />
+            <LazyImage src={embed.url} alt="Embed" />
           </div>
         );
 
@@ -392,6 +393,10 @@ export default function PostCard({ post, onDeleted }) {
   const repostRef = useRef(null);
   const shareRef = useRef(null);
   const reactionRef = useRef(null);
+
+  // Swipe gesture refs
+  const touchStartX = useRef(null);
+  const touchEndX = useRef(null);
 
   // ✅ DERIVED BOOLEANS dengan safe access
   const liked = user && likes.some((id) => String(id) === String(user.id));
@@ -606,7 +611,28 @@ export default function PostCard({ post, onDeleted }) {
         </div>
       )}
 
-      <article className="card" onClick={handleCardClick} style={{ cursor: 'pointer' }}>
+      <article className="card" onClick={handleCardClick} style={{ cursor: 'pointer', touchAction: 'pan-y' }}
+        onTouchStart={(e) => {
+          touchEndX.current = null;
+          touchStartX.current = e.targetTouches[0].clientX;
+        }}
+        onTouchMove={(e) => {
+          touchEndX.current = e.targetTouches[0].clientX;
+        }}
+        onTouchEnd={() => {
+          if (!touchStartX.current || !touchEndX.current) return;
+          const distance = touchStartX.current - touchEndX.current;
+          const minSwipeDistance = 75;
+          const isLeftSwipe = distance > minSwipeDistance;
+          const isRightSwipe = distance < -minSwipeDistance;
+          
+          if (isRightSwipe) {
+             toggleLike();
+          } else if (isLeftSwipe) {
+             toggleBookmark();
+          }
+        }}
+      >
         <div className="post-main">
           {/* Avatar dengan safe access */}
           <div className="post-avatar-wrap" onClick={(e) => e.stopPropagation()}>

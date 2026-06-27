@@ -176,6 +176,7 @@ model Comment {
 
   @@index([postId, createdAt])
   @@index([authorId])
+  @@index([parentId])
 }
 
 model Tag {

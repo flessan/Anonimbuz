@@ -7,6 +7,7 @@ import { PrismaClient } from '@prisma/client';
 
 // Import middleware dan routes
 import { securityMiddleware } from './middleware/security.js';
+import { rateLimiter } from './middleware/rateLimiter.js';
 import authRoutes from './routes/auth.js';
 import postRoutes from './routes/posts.js';
 import userRoutes from './routes/users.js';
@@ -23,6 +24,8 @@ const app = new Hono().basePath('/api');
 
 // ✅ 2. TERAPKAN MIDDLEWARE
 securityMiddleware(app);
+app.use('*', rateLimiter({ windowMs: 60 * 1000, maxRequests: 100 })); // Global rate limit
+app.use('/api/auth/*', rateLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 15 })); // Stricter auth rate limit
 
 // ✅ 3. DATABASE CONNECTION MIDDLEWARE
 app.use('*', async (c, next) => {

@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './auth.jsx';
+import { FeatureFlagProvider } from './context/FeatureFlagContext.jsx';
 import './styles.css';
 import api from './api.js';
 import { auditAllEndpoints } from './utils/apiAudit.js';
@@ -16,9 +17,11 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
       <BrowserRouter>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
+        <FeatureFlagProvider>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </FeatureFlagProvider>
       </BrowserRouter>
     </ErrorBoundary>
   </React.StrictMode>

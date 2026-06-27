@@ -209,6 +209,83 @@ usersApp.get('/:username', authOptional, async (c) => {
     }
 });
 
+// GET /users/me/export - Ekspor data GDPR
+usersApp.get('/me/export', authRequired, async (c) => {
+    const prisma = c.get('prisma');
+    const userId = c.get('userId');
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            include: {
+                posts: {
+                    select: {
+                        id: true,
+                        content: true,
+                        embedUrl: true,
+                        isEdited: true,
+                        isPinned: true,
+                        createdAt: true,
+                        status: true
+                    }
+                },
+                comments: {
+                    select: {
+                        id: true,
+                        content: true,
+                        postId: true,
+                        createdAt: true
+                    }
+                },
+                bookmarks: {
+                    select: {
+                        id: true,
+                        postId: true,
+                        createdAt: true
+                    }
+                },
+                reactions: {
+                    select: {
+                        id: true,
+                        postId: true,
+                        emoji: true,
+                        createdAt: true
+                    }
+                }
+            }
+        });
+
+        if (!user) return c.json({ error: 'User tidak ditemukan' }, 404);
+
+        const exportData = {
+            profile: {
+                id: user.id,
+                username: user.username,
+                displayName: user.displayName,
+                bio: user.bio,
+                avatarUrl: user.avatarUrl,
+                bannerUrl: user.bannerUrl,
+                githubUrl: user.githubUrl,
+                instagramUrl: user.instagramUrl,
+                twitterUrl: user.twitterUrl,
+                facebookUrl: user.facebookUrl,
+                createdAt: user.createdAt,
+                role: user.role
+            },
+            posts: user.posts,
+            comments: user.comments,
+            bookmarks: user.bookmarks,
+            reactions: user.reactions,
+            exportedAt: new Date().toISOString()
+        };
+
+        return c.json({ data: exportData });
+    } catch (e) {
+        console.error('Error exporting user data:', e);
+        return c.json({ error: 'Gagal mengekspor data', details: e.message }, 500);
+    }
+});
+
 // PATCH /users/me - Update profil
 usersApp.patch('/me', authRequired, async (c) => {
     const prisma = c.get('prisma');
@@ -569,6 +646,29 @@ usersApp.get('/:username/followers/top', async (c) => {
         })),
         totalCount
     });
+});
+
+// DELETE /users/me - Hapus akun secara permanen (cascade)
+usersApp.delete('/me', authRequired, async (c) => {
+    const prisma = c.get('prisma');
+    const userId = c.get('userId');
+
+    try {
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) return c.json({ error: 'User tidak ditemukan' }, 404);
+
+        // Hapus aset dari Cloudinary jika ada
+        if (user.avatarPublicId) await destroyCloudinaryAsset(user.avatarPublicId, c.env);
+        if (user.bannerPublicId) await destroyCloudinaryAsset(user.bannerPublicId, c.env);
+
+        // Hapus user dari database (akan cascade ke semua relasi)
+        await prisma.user.delete({ where: { id: userId } });
+
+        return c.json({ message: 'Akun berhasil dihapus permanen' });
+    } catch (e) {
+        console.error('Error deleting account:', e);
+        return c.json({ error: 'Gagal menghapus akun', details: e.message }, 500);
+    }
 });
 
 export default usersApp;

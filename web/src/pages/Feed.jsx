@@ -4,6 +4,7 @@ import { useAuth } from '../auth.jsx';
 import { CreatePostBar } from '../components/Composer.jsx';
 import PostCard from '../components/PostCard.jsx';
 import OnboardingModal from '../components/OnboardingModal.jsx';
+import WeeklyPrompt from '../components/WeeklyPrompt.jsx';
 
 function SkeletonLoader() {
   return (
@@ -230,6 +231,9 @@ export default function Feed() {
           </button>
         )}
       </div>
+
+      {/* Weekly Prompts - Only show in for_you tab */}
+      {user && activeTab === 'for_you' && <WeeklyPrompt />}
 
       {/* Create Post Bar */}
       {user && <CreatePostBar />}
