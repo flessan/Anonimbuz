@@ -45,10 +45,6 @@ export default function Feed() {
     }
   }, [user]);
 
-  // Pull-to-refresh states
-  const [pulling, setPulling] = useState(false);
-  const [pullProgress, setPullProgress] = useState(0);
-  const startTouchY = useRef(0);
   const bottomRef = useRef(null);
   const mountedRef = useRef(false);
 
@@ -100,8 +96,6 @@ export default function Feed() {
     } finally {
       setLoading(false);
       setLoadingMore(false);
-      setPulling(false);
-      setPullProgress(0);
     }
   }
 
@@ -216,63 +210,8 @@ export default function Feed() {
     });
   };
 
-  // ✅ 9. PULL-TO-REFRESH HANDLERS
-  const handleTouchStart = (e) => {
-    if (window.scrollY === 0) {
-      startTouchY.current = e.touches[0].clientY;
-    }
-  };
-
-  const handleTouchMove = (e) => {
-    if (window.scrollY === 0 && startTouchY.current > 0) {
-      const currentY = e.touches[0].clientY;
-      const diff = currentY - startTouchY.current;
-      if (diff > 0) {
-        setPulling(true);
-        setPullProgress(Math.min(100, Math.floor((diff / 150) * 100)));
-      }
-    }
-  };
-
-  const handleTouchEnd = () => {
-    startTouchY.current = 0;
-    if (pulling) {
-      if (pullProgress >= 80) {
-        // Refresh feed
-        feedCache[activeTab] = { posts: [], page: 1, hasMore: true, scrollY: 0 };
-        loadFeed(1, false);
-      } else {
-        setPulling(false);
-        setPullProgress(0);
-      }
-    }
-  };
-
   return (
-    <div
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      style={{ minHeight: '100%' }}
-    >
-      {/* Pull-to-refresh indicator */}
-      {pulling && (
-        <div style={{
-          height: `${pullProgress / 2.5}px`,
-          maxHeight: '40px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'var(--color-surface)',
-          fontSize: '12px',
-          color: 'var(--color-accent)',
-          fontWeight: 600,
-          overflow: 'hidden',
-          transition: pulling ? 'none' : 'height 200ms ease'
-        }}>
-          {pullProgress >= 80 ? 'Lepaskan untuk memuat ulang...' : 'Tarik untuk memuat ulang...'}
-        </div>
-      )}
+    <div style={{ minHeight: '100%' }}>
 
       {/* Tab Navigation */}
       <div className="feed-tabs">

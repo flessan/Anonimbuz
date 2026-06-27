@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --color-bg: #09090b;
   --color-bg-gradient: radial-gradient(circle at top, #18142c 0%, #09080f 60%, #050508 100%);
   --color-surface: rgba(20, 20, 25, 0.6);
@@ -3997,4 +3997,50 @@ select:focus {
   font-size: 0.88em;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   color: var(--color-accent);
+}
+
+/* Smooth dark/light mode transitions */
+body,
+.app-layout,
+.top-bar,
+.sidebar,
+.card,
+.bottom-nav,
+.modal-content,
+button,
+a,
+input,
+textarea,
+select {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, fill 0.3s ease, stroke 0.3s ease;
+}
+
+/* Active dot indicator for bottom navigation items */
+.bottom-nav-item {
+  position: relative;
+}
+
+.bottom-nav-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%) scale(1);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow: 0 0 8px var(--color-accent);
+  animation: bottomNavPopIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes bottomNavPopIn {
+  from {
+    transform: translateX(-50%) scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
 }

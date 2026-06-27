@@ -6,6 +6,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0E0E10" />
 
+  <!-- Prevent initial theme flash -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('anomia_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      if (savedTheme === 'light') {
+        const style = document.createElement('style');
+        style.innerHTML = '.initial-loader { background-color: #f8fafc !important; } .loader-text { color: #0f172a !important; } .spinner { border-top-color: #4f46e5 !important; }';
+        document.head.appendChild(style);
+      }
+    })();
+  </script>
+
   <!-- SEO & Meta Tags Dasar -->
   <title>Anonimbuz — Bisikan Suaramu Tanpa Identitas</title>
   <meta name="description"

@@ -376,15 +376,46 @@ export function ComposerModal({ isOpen, onClose }) {
               />
             )}
 
-            {/* Character counter */}
+            {/* Character counter & Circular progress */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
               <div>
                 {showPollForm && (
                   <span style={{ fontSize: '12px', color: 'var(--color-accent)', fontWeight: 600 }}>Polling ditambahkan</span>
                 )}
               </div>
-              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                {content.length}/2000
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ position: 'relative', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="20" height="20" style={{ transform: 'rotate(-90deg)' }}>
+                    {/* Background circle */}
+                    <circle
+                      cx="10"
+                      cy="10"
+                      r="8"
+                      fill="none"
+                      stroke="var(--color-border)"
+                      strokeWidth="2"
+                    />
+                    {/* Foreground progress circle */}
+                    <circle
+                      cx="10"
+                      cy="10"
+                      r="8"
+                      fill="none"
+                      stroke={content.length >= 2000 ? 'var(--color-danger)' : content.length >= 1900 ? '#fbbf24' : 'var(--color-accent)'}
+                      strokeWidth="2"
+                      strokeDasharray={2 * Math.PI * 8}
+                      strokeDashoffset={2 * Math.PI * 8 - (Math.min(content.length, 2000) / 2000) * (2 * Math.PI * 8)}
+                      style={{ transition: 'stroke-dashoffset 0.1s ease' }}
+                    />
+                  </svg>
+                </div>
+                <div style={{
+                  fontSize: '12px',
+                  color: content.length >= 2000 ? 'var(--color-danger)' : content.length >= 1900 ? '#fbbf24' : 'var(--color-text-secondary)',
+                  fontWeight: content.length >= 1900 ? '600' : 'normal'
+                }}>
+                  {content.length}/2000
+                </div>
               </div>
             </div>
 

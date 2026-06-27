@@ -1,17 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './auth.jsx';
 import anonLogo from './assets/images/anon.svg';
-import Login from './pages/Login.jsx';
-import Register from './pages/Register.jsx';
-import Feed from './pages/Feed.jsx';
-import Profile from './pages/Profile.jsx';
-import PostDetail from './pages/PostDetail.jsx';
-import TagPage from './pages/TagPage.jsx';
-import Explore from './pages/Explore.jsx';
-import Notifications from './pages/Notifications.jsx';
-import AdminPanel from './pages/AdminPanel.jsx';
-import FollowList from './pages/FollowList.jsx';
 import { ComposerModal } from './components/Composer.jsx';
 import KeyboardShortcutsModal from './components/KeyboardShortcutsModal.jsx';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js';
@@ -28,11 +18,23 @@ import {
   IconSettings,
   IconInfo
 } from './components/Icons.jsx';
-import Bookmarks from './pages/Bookmarks.jsx';
-import BlockedUsers from './pages/BlockedUsers.jsx';
-import About from './pages/About.jsx';
 import BackToTop from './components/BackToTop.jsx';
 import TrendingSidebar from './components/TrendingSidebar.jsx';
+
+// Lazy load pages for code splitting
+const Login = lazy(() => import('./pages/Login.jsx'));
+const Register = lazy(() => import('./pages/Register.jsx'));
+const Feed = lazy(() => import('./pages/Feed.jsx'));
+const Profile = lazy(() => import('./pages/Profile.jsx'));
+const PostDetail = lazy(() => import('./pages/PostDetail.jsx'));
+const TagPage = lazy(() => import('./pages/TagPage.jsx'));
+const Explore = lazy(() => import('./pages/Explore.jsx'));
+const Notifications = lazy(() => import('./pages/Notifications.jsx'));
+const AdminPanel = lazy(() => import('./pages/AdminPanel.jsx'));
+const FollowList = lazy(() => import('./pages/FollowList.jsx'));
+const Bookmarks = lazy(() => import('./pages/Bookmarks.jsx'));
+const BlockedUsers = lazy(() => import('./pages/BlockedUsers.jsx'));
+const About = lazy(() => import('./pages/About.jsx'));
 
 // Accent color presets
 const ACCENT_PRESETS = [
@@ -381,23 +383,25 @@ export default function App() {
 
         {/* Main Content Area */}
         <main className="container">
-          <Routes>
-            <Route path="/" element={<RequireAuth><Feed /></RequireAuth>} />
-            <Route path="/explore" element={<Explore />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/u/:username" element={<Profile />} />
-            <Route path="/u/:username/followers" element={<FollowList type="followers" />} />
-            <Route path="/u/:username/following" element={<FollowList type="following" />} />
-            <Route path="/p/:id" element={<PostDetail />} />
-            <Route path="/tag/:slug" element={<TagPage />} />
-            <Route path="/notifications" element={<RequireAuth><Notifications /></RequireAuth>} />
-            <Route path="/admin" element={<RequireAuth><AdminPanel /></RequireAuth>} />
-            <Route path="/bookmarks" element={<RequireAuth><Bookmarks /></RequireAuth>} />
-            <Route path="/settings/blocked" element={<RequireAuth><BlockedUsers /></RequireAuth>} />
-            <Route path="/about" element={<About />} />
-            <Route path="*" element={<div className="center">404 - Halaman Tidak Ditemukan</div>} />
-          </Routes>
+          <Suspense fallback={<div className="center">Memuat...</div>}>
+            <Routes>
+              <Route path="/" element={<RequireAuth><Feed /></RequireAuth>} />
+              <Route path="/explore" element={<Explore />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/u/:username" element={<Profile />} />
+              <Route path="/u/:username/followers" element={<FollowList type="followers" />} />
+              <Route path="/u/:username/following" element={<FollowList type="following" />} />
+              <Route path="/p/:id" element={<PostDetail />} />
+              <Route path="/tag/:slug" element={<TagPage />} />
+              <Route path="/notifications" element={<RequireAuth><Notifications /></RequireAuth>} />
+              <Route path="/admin" element={<RequireAuth><AdminPanel /></RequireAuth>} />
+              <Route path="/bookmarks" element={<RequireAuth><Bookmarks /></RequireAuth>} />
+              <Route path="/settings/blocked" element={<RequireAuth><BlockedUsers /></RequireAuth>} />
+              <Route path="/about" element={<About />} />
+              <Route path="*" element={<div className="center">404 - Halaman Tidak Ditemukan</div>} />
+            </Routes>
+          </Suspense>
         </main>
 
         {/* Trending Sidebar (hidden on narrow screens via CSS) */}
@@ -411,23 +415,23 @@ export default function App() {
 
       {/* Bottom Navigation Bar (Mobile Only) */}
       <nav className="bottom-nav mobile-only">
-        <Link to="/" className={`bottom-nav-item ${location.pathname === '/' ? 'active' : ''}`}>
+        <Link to="/" className={`bottom-nav-item ${location.pathname === '/' ? 'active' : ''}`} onClick={() => navigator.vibrate?.(15)}>
           <IconHome filled={location.pathname === '/'} />
           <span className="bottom-nav-label">Beranda</span>
         </Link>
 
-        <Link to="/explore" className={`bottom-nav-item ${location.pathname === '/explore' ? 'active' : ''}`}>
+        <Link to="/explore" className={`bottom-nav-item ${location.pathname === '/explore' ? 'active' : ''}`} onClick={() => navigator.vibrate?.(15)}>
           <IconSearch filled={location.pathname === '/explore'} />
           <span className="bottom-nav-label">Jelajah</span>
         </Link>
 
-        <button className="bottom-nav-fab" onClick={handleOpenComposer} title="Buat Post">
+        <button className="bottom-nav-fab" onClick={() => { navigator.vibrate?.(15); handleOpenComposer(); }} title="Buat Post">
           <IconCreate filled={true} size={24} />
         </button>
 
         {/* HAPUS BOOKMARK DARI SINI */}
 
-        <Link to="/notifications" className={`bottom-nav-item ${location.pathname === '/notifications' ? 'active' : ''}`}>
+        <Link to="/notifications" className={`bottom-nav-item ${location.pathname === '/notifications' ? 'active' : ''}`} onClick={() => navigator.vibrate?.(15)}>
           <IconNotification filled={location.pathname === '/notifications'} />
           {unreadCount > 0 && (
             <span className="bottom-nav-badge">
@@ -437,7 +441,7 @@ export default function App() {
           <span className="bottom-nav-label">Notifikasi</span>
         </Link>
 
-        <Link to={user ? `/u/${user.username}` : '/login'} className={`bottom-nav-item ${location.pathname.startsWith('/u/') || location.pathname === '/login' ? 'active' : ''}`}>
+        <Link to={user ? `/u/${user.username}` : '/login'} className={`bottom-nav-item ${location.pathname.startsWith('/u/') || location.pathname === '/login' ? 'active' : ''}`} onClick={() => navigator.vibrate?.(15)}>
           <IconProfile filled={location.pathname.startsWith('/u/') || location.pathname === '/login'} />
           <span className="bottom-nav-label">Profil</span>
         </Link>
