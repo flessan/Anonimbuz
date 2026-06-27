@@ -1,0 +1,20 @@
+# .sweep.yaml
+rules:
+  - "Use TypeScript for all new files"
+  - "Follow existing code style"
+  - "Add tests for new features"
+  - "Use functional components in React"
+  - "Always handle errors in API calls"
+
+instructions:
+  - "When fixing bugs, explain the root cause"
+  - "For UI changes, include before/after screenshots"
+  - "Keep PRs small and focused"
+
+tests:
+  command: "npm test"
+  timeout: 60
+
+build:
+  command: "npm run build"
+  timeout: 120
