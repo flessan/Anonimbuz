@@ -57,6 +57,11 @@ model User {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  // Streaks
+  currentStreak  Int      @default(0)
+  longestStreak  Int      @default(0)
+  lastPostDate   DateTime?
+
   // Relations
   posts      Post[]    @relation("UserPosts")
   comments   Comment[] @relation("UserComments")

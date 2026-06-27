@@ -5,6 +5,8 @@ import { useAuth } from '../auth.jsx';
 import PostCard from '../components/PostCard.jsx';
 import BadgeRole from '../components/BadgeRole.jsx';
 import AvatarStack from '../components/AvatarStack.jsx'; // ➕ TAMBAHKAN INI
+import UserBadges from '../components/UserBadges.jsx';
+import StreakWidget from '../components/StreakWidget.jsx';
 
 function ProfileCommentItem({ comment }) {
   // ✅ Safe access
@@ -534,6 +536,12 @@ if (amIFollowing && areTheyFollowingMe) {
                   </a>
                 )}
               </div>
+
+              {/* Streak Display */}
+              <StreakWidget streaks={profile.streaks} />
+
+              {/* User Badges */}
+              <UserBadges profile={profile} />
 
               {/* Stats dengan Link ke Followers/Following */}
               <div className="profile-stats" style={{ display: 'flex', gap: '16px', marginTop: '12px' }}>

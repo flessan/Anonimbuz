@@ -289,6 +289,50 @@ postsApp.post('/', authRequired, async (c) => {
         });
     }
 
+    // --- Streak Logic ---
+    try {
+        const userRec = await prisma.user.findUnique({ where: { id: userId } });
+        if (userRec) {
+            const today = new Date();
+            const lastPost = userRec.lastPostDate ? new Date(userRec.lastPostDate) : null;
+            
+            let newStreak = userRec.currentStreak;
+            let newLongest = userRec.longestStreak;
+            
+            if (!lastPost) {
+                newStreak = 1;
+                newLongest = Math.max(1, newLongest);
+            } else {
+                const todayStr = today.toISOString().split('T')[0];
+                const lastPostStr = lastPost.toISOString().split('T')[0];
+                
+                if (todayStr !== lastPostStr) {
+                    const yesterday = new Date(today);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    const yesterdayStr = yesterday.toISOString().split('T')[0];
+                    
+                    if (lastPostStr === yesterdayStr) {
+                        newStreak += 1;
+                    } else {
+                        newStreak = 1;
+                    }
+                    newLongest = Math.max(newStreak, newLongest);
+                }
+            }
+            
+            await prisma.user.update({
+                where: { id: userId },
+                data: {
+                    currentStreak: newStreak,
+                    longestStreak: newLongest,
+                    lastPostDate: today
+                }
+            });
+        }
+    } catch (streakErr) {
+        console.error('Streak update error:', streakErr);
+    }
+
     return c.json({ post: anonymizePost(post, userId) }, 201);
 });
 

@@ -5,6 +5,7 @@ import api from '../api';
 import { useAuth } from '../auth.jsx';
 import BadgeRole from './BadgeRole.jsx';
 import LazyImage from './LazyImage.jsx';
+import LinkPreview, { extractFirstUrl } from './LinkPreview.jsx';
 import {
   IconHeart,
   IconComment,
@@ -668,6 +669,12 @@ export default function PostCard({ post, onDeleted }) {
 
             <PostContent content={originalPost.content} />
             <EmbedPreview url={originalPost.embedUrl} content={originalPost.content} />
+            {/* Rich link preview - only shown when no media embed is present */}
+            {!originalPost.embedUrl && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <LinkPreview url={extractFirstUrl(originalPost.content)} />
+              </div>
+            )}
             <PostPoll poll={poll} handleVote={handleVote} user={user} />
 
             {/* Quote Post Render dengan safe access */}

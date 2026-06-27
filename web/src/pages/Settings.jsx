@@ -7,6 +7,11 @@ export default function Settings({ theme, toggleTheme, accentIndex, setAccent, p
   const [exportErr, setExportErr] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteErr, setDeleteErr] = useState('');
+  const [activeSection, setActiveSection] = useState(null);
+
+  const toggleSection = (section) => {
+    setActiveSection(prev => prev === section ? null : section);
+  };
 
   const handleExportData = async () => {
     setExporting(true);
@@ -44,128 +49,120 @@ export default function Settings({ theme, toggleTheme, accentIndex, setAccent, p
     }
   };
 
-  return (
-    <div className="card settings-container" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '12px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--color-text-primary)' }}>Pengaturan</h2>
-        <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>Sesuaikan tampilan dan kelola data akun Anda</p>
-      </div>
-
-      {/* Theme switching */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <h3 style={{ fontSize: '15px', fontWeight: '600' }}>Tema Tampilan</h3>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-            Tema aktif saat ini: <strong>{theme === 'dark' ? 'Gelap 🌙' : 'Terang ☀️'}</strong>
-          </span>
-          <button className="profile-btn" onClick={toggleTheme} style={{ minWidth: '120px' }}>
-            Ubah ke {theme === 'dark' ? 'Terang' : 'Gelap'}
-          </button>
+  const AccordionItem = ({ id, title, subtitle, children, isDanger = false }) => (
+    <div style={{ borderBottom: '1px solid var(--color-border)' }}>
+      <button 
+        onClick={() => toggleSection(id)}
+        style={{
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '16px 0',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          textAlign: 'left'
+        }}
+      >
+        <div>
+          <h3 style={{ fontSize: '16px', fontWeight: '600', color: isDanger ? 'var(--color-danger)' : 'var(--color-text-primary)' }}>{title}</h3>
+          {subtitle && <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginTop: '4px' }}>{subtitle}</p>}
+        </div>
+        <span style={{ 
+          transform: activeSection === id ? 'rotate(180deg)' : 'rotate(0deg)', 
+          transition: 'transform 0.3s ease',
+          color: 'var(--color-text-secondary)',
+          fontSize: '20px'
+        }}>
+          ▼
+        </span>
+      </button>
+      <div style={{
+        maxHeight: activeSection === id ? '500px' : '0',
+        overflow: 'hidden',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        opacity: activeSection === id ? 1 : 0
+      }}>
+        <div style={{ padding: '0 0 20px 0' }}>
+          {children}
         </div>
       </div>
+    </div>
+  );
 
-      <div style={{ height: '1px', background: 'var(--color-border)' }} />
+  return (
+    <div className="card settings-container" style={{ padding: '24px' }}>
+      <div style={{ paddingBottom: '16px' }}>
+        <h2 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--color-text-primary)' }}>Pengaturan</h2>
+        <p style={{ fontSize: '14px', color: 'var(--color-text-secondary)' }}>Sesuaikan preferensi aplikasi Anda</p>
+      </div>
 
-      {/* Accent selection */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <h3 style={{ fontSize: '15px', fontWeight: '600' }}>Warna Aksen</h3>
-        <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>Pilih warna aksen untuk menyorot tautan, tombol, dan elemen interaktif</p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '4px' }}>
+      <AccordionItem id="theme" title="Tema Tampilan" subtitle={`Saat ini: ${theme === 'dark' ? 'Gelap 🌙' : 'Terang ☀️'}`}>
+        <button className="profile-btn" onClick={toggleTheme} style={{ minWidth: '120px' }}>
+          Ubah ke {theme === 'dark' ? 'Terang' : 'Gelap'}
+        </button>
+      </AccordionItem>
+
+      <AccordionItem id="accent" title="Warna Aksen" subtitle="Pilih warna aksen kustom">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
           {presets.map((preset, idx) => (
             <button
               key={preset.name}
               className={`accent-swatch ${accentIndex === idx ? 'active' : ''}`}
               style={{
                 background: preset.dark,
-                width: '36px',
-                height: '36px',
+                width: '40px',
+                height: '40px',
                 borderRadius: '50%',
                 border: accentIndex === idx ? '3px solid #ffffff' : '2px solid transparent',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
-                boxShadow: accentIndex === idx ? '0 0 12px ' + preset.dark : 'none'
+                boxShadow: accentIndex === idx ? `0 0 12px ${preset.dark}` : 'none'
               }}
               onClick={() => setAccent(idx)}
               title={preset.name}
             />
           ))}
         </div>
-      </div>
+      </AccordionItem>
 
-      <div style={{ height: '1px', background: 'var(--color-border)' }} />
+      <AccordionItem id="shortcuts" title="Pintasan Keyboard" subtitle="Navigasi dengan cepat menggunakan keyboard">
+        <button className="profile-btn" onClick={onOpenShortcuts} style={{ minWidth: '120px' }}>
+          Buka Pintasan
+        </button>
+      </AccordionItem>
 
-      {/* Keyboard Shortcuts */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <h3 style={{ fontSize: '15px', fontWeight: '600' }}>Pintasan Keyboard</h3>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-            Gunakan pintasan keyboard untuk bernavigasi lebih cepat
-          </span>
-          <button className="profile-btn" onClick={onOpenShortcuts} style={{ minWidth: '120px' }}>
-            Buka Pintasan
-          </button>
-        </div>
-      </div>
-
-      <div style={{ height: '1px', background: 'var(--color-border)' }} />
-
-      {/* Links & Navigation */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <h3 style={{ fontSize: '15px', fontWeight: '600' }}>Privasi & Informasi</h3>
+      <AccordionItem id="privacy" title="Privasi & Informasi" subtitle="Pengaturan privasi dan daftar blokir">
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-          <Link to="/settings/blocked" className="profile-btn" style={{ textDecoration: 'none', color: 'inherit', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-            🚫 Daftar Pengguna Diblokir
+          <Link to="/settings/blocked" className="profile-btn" style={{ textDecoration: 'none', color: 'inherit', display: 'inline-flex', alignItems: 'center' }}>
+            🚫 Daftar Blokir
           </Link>
-          <Link to="/about" className="profile-btn" style={{ textDecoration: 'none', color: 'inherit', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-            ℹ️ Tentang Anonimbuz
+          <Link to="/about" className="profile-btn" style={{ textDecoration: 'none', color: 'inherit', display: 'inline-flex', alignItems: 'center' }}>
+            ℹ️ Tentang
           </Link>
         </div>
-      </div>
+      </AccordionItem>
 
-      <div style={{ height: '1px', background: 'var(--color-border)' }} />
+      <AccordionItem id="export" title="Ekspor Data GDPR" subtitle="Unduh seluruh data Anda dalam format JSON">
+        <button className="profile-btn primary" onClick={handleExportData} disabled={exporting}>
+          {exporting ? 'Mengekspor...' : 'Ekspor JSON'}
+        </button>
+        {exportErr && <div style={{ marginTop: '8px', color: 'var(--color-danger)', fontSize: '13px' }}>{exportErr}</div>}
+      </AccordionItem>
 
-      {/* GDPR Data Export Tool */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <h3 style={{ fontSize: '15px', fontWeight: '600' }}>Ekspor Data GDPR</h3>
-        <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-          Unduh salinan lengkap semua data pribadi Anda (profil, postingan, komentar, reaksi, dan bookmark) dalam format JSON.
-        </p>
-        <div>
-          <button className="profile-btn primary" onClick={handleExportData} disabled={exporting}>
-            {exporting ? 'Mengekspor...' : 'Ekspor Semua Data Saya (JSON)'}
-          </button>
-          {exportErr && (
-            <div style={{ marginTop: '8px', color: 'var(--color-danger)', fontSize: '13px' }}>
-              {exportErr}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div style={{ height: '1px', background: 'var(--color-border)', margin: '12px 0' }} />
-
-      {/* Account Deletion */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <h3 style={{ fontSize: '15px', fontWeight: '600', color: 'var(--color-danger)' }}>Hapus Akun</h3>
-        <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-          Hapus akun Anda secara permanen beserta semua data yang terkait. Tindakan ini tidak dapat dibatalkan.
-        </p>
-        <div>
-          <button 
-            className="profile-btn" 
-            style={{ borderColor: 'var(--color-danger)', color: 'var(--color-danger)' }} 
-            onClick={handleDeleteAccount} 
-            disabled={deleting}
-          >
-            {deleting ? 'Menghapus...' : 'Hapus Akun Permanen'}
-          </button>
-          {deleteErr && (
-            <div style={{ marginTop: '8px', color: 'var(--color-danger)', fontSize: '13px' }}>
-              {deleteErr}
-            </div>
-          )}
-        </div>
-      </div>
+      <AccordionItem id="delete" title="Hapus Akun" subtitle="Hapus akun permanen dan seluruh data" isDanger={true}>
+        <button 
+          className="profile-btn" 
+          style={{ borderColor: 'var(--color-danger)', color: 'var(--color-danger)' }} 
+          onClick={handleDeleteAccount} 
+          disabled={deleting}
+        >
+          {deleting ? 'Menghapus...' : 'Hapus Akun Permanen'}
+        </button>
+        {deleteErr && <div style={{ marginTop: '8px', color: 'var(--color-danger)', fontSize: '13px' }}>{deleteErr}</div>}
+      </AccordionItem>
     </div>
   );
 }
+

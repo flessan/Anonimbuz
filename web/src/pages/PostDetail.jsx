@@ -42,6 +42,12 @@ export default function PostDetail() {
   const [replyContent, setReplyContent] = useState('');
   const [replyBusy, setReplyBusy] = useState(false);
 
+  // Thread collapse/expand state: track which comment threads are open
+  const [expandedThreads, setExpandedThreads] = useState({});
+  const toggleThread = (commentId) => {
+    setExpandedThreads(prev => ({ ...prev, [commentId]: !prev[commentId] }));
+  };
+
   // GIF state
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [gifTarget, setGifTarget] = useState('main'); // 'main' or commentId
@@ -240,10 +246,15 @@ export default function PostDetail() {
         <div className="comments-list">
           {topLevelComments.map((comment) => {
             const commentReplies = replies.filter((r) => String(r.parentId) === String(comment.id));
-            const isCommentMine = user && String(comment.author.id || comment.author.id) === String(user.id || user.id);
+            const isCommentMine = user && String(comment.author.id) === String(user.id);
+            const hasReplies = commentReplies.length > 0;
+            const isExpanded = expandedThreads[comment.id] !== false; // default open
 
             return (
               <div key={comment.id} className="comment-item-wrap">
+                {/* Vertical thread line when replies exist */}
+                {hasReplies && <div className="comment-thread-line" />}
+
                 {/* Top-Level Comment Card */}
                 <article className="comment-item">
                   <div className="comment-meta">
@@ -270,7 +281,7 @@ export default function PostDetail() {
                           setActiveReplyCommentId(activeReplyCommentId === comment.id ? null : comment.id);
                         }}
                       >
-                        Balas
+                        💬 Balas
                       </button>
                     )}
 
@@ -299,6 +310,14 @@ export default function PostDetail() {
                     ))}
                   </div>
                 </article>
+
+                {/* Thread collapse/expand toggle */}
+                {hasReplies && (
+                  <button className="thread-toggle-btn" onClick={() => toggleThread(comment.id)}>
+                    <span className={`thread-toggle-icon ${isExpanded ? 'open' : ''}`}>▶</span>
+                    {isExpanded ? `Sembunyikan ${commentReplies.length} balasan` : `Tampilkan ${commentReplies.length} balasan`}
+                  </button>
+                )}
 
                 {/* Inline Reply Input Composer */}
                 {activeReplyCommentId === comment.id && user && (
@@ -337,53 +356,66 @@ export default function PostDetail() {
                   </div>
                 )}
 
-                {/* Replies list (Indented, 1 level deep only) */}
-                {commentReplies.map((reply) => {
-                  const isReplyMine = user && String(reply.author.id || reply.author.id) === String(user.id || user.id);
-                  return (
-                    <article key={reply.id} className="comment-item reply">
-                      <div className="comment-meta">
-                        <Link to={`/u/${reply.author.username}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'inherit' }}>
-                          <CommentAvatar user={reply.author} size={24} />
-                          <strong className="comment-author-name">{reply.author.displayName || reply.author.username}</strong>
-                          <BadgeRole role={reply.author.role} />
-                        </Link>
-                        <span>·</span>
-                        <span style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>
-                          {new Date(reply.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
+                {/* Replies list - collapsible */}
+                <div className={`comment-replies-container ${isExpanded ? 'expanded' : 'collapsed'}`}>
+                  {commentReplies.map((reply) => {
+                    const isReplyMine = user && String(reply.author.id) === String(user.id);
+                    return (
+                      <article key={reply.id} className="comment-item reply">
+                        <div className="comment-meta">
+                          <Link to={`/u/${reply.author.username}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'inherit' }}>
+                            <CommentAvatar user={reply.author} size={24} />
+                            <strong className="comment-author-name">{reply.author.displayName || reply.author.username}</strong>
+                            <BadgeRole role={reply.author.role} />
+                          </Link>
+                          <span>·</span>
+                          <span style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>
+                            {new Date(reply.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
 
-                      <div className="comment-content" style={{ marginTop: 4 }} dangerouslySetInnerHTML={{ __html: parsePostContent(reply.content) }} />
+                        <div className="comment-content" style={{ marginTop: 4 }} dangerouslySetInnerHTML={{ __html: parsePostContent(reply.content) }} />
 
-                      <div className="comment-actions">
-                        {isReplyMine ? (
-                          <button className="comment-action-link" style={{ color: 'var(--color-danger)' }} onClick={() => deleteComment(reply.id)}>
-                            Hapus
-                          </button>
-                        ) : (user && (user.role === 'mod' || user.role === 'dev') && (
-                          commentToDelete === reply.id ? (
-                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: 4 }}>
-                              <input
-                                type="text"
-                                placeholder="Alasan hapus..."
-                                value={commentReason}
-                                onChange={(e) => setCommentReason(e.target.value)}
-                                style={{ fontSize: '11px', padding: '4px 8px', height: '24px', flex: 1, minHeight: 'auto', margin: 0, width: '120px' }}
-                              />
-                              <button className="profile-btn primary" onClick={() => moderateDeleteComment(reply.id)} style={{ fontSize: '10px', padding: '4px 8px', height: '24px' }}>Ya</button>
-                              <button className="profile-btn" onClick={() => setCommentToDelete(null)} style={{ fontSize: '10px', padding: '4px 8px', height: '24px' }}>Batal</button>
-                            </div>
-                          ) : (
-                            <button className="comment-action-link" style={{ color: 'var(--color-danger)' }} onClick={() => { setCommentToDelete(reply.id); setCommentReason(''); }}>
-                              Hapus (Mod)
+                        <div className="comment-actions">
+                          {user && (
+                            <button
+                              className="comment-action-link"
+                              onClick={() => {
+                                setReplyContent('');
+                                setActiveReplyCommentId(activeReplyCommentId === reply.id ? null : reply.id);
+                              }}
+                            >
+                              💬 Balas
                             </button>
-                          )
-                        ))}
-                      </div>
-                    </article>
-                  );
-                })}
+                          )}
+                          {isReplyMine ? (
+                            <button className="comment-action-link" style={{ color: 'var(--color-danger)' }} onClick={() => deleteComment(reply.id)}>
+                              Hapus
+                            </button>
+                          ) : (user && (user.role === 'mod' || user.role === 'dev') && (
+                            commentToDelete === reply.id ? (
+                              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: 4 }}>
+                                <input
+                                  type="text"
+                                  placeholder="Alasan hapus..."
+                                  value={commentReason}
+                                  onChange={(e) => setCommentReason(e.target.value)}
+                                  style={{ fontSize: '11px', padding: '4px 8px', height: '24px', flex: 1, minHeight: 'auto', margin: 0, width: '120px' }}
+                                />
+                                <button className="profile-btn primary" onClick={() => moderateDeleteComment(reply.id)} style={{ fontSize: '10px', padding: '4px 8px', height: '24px' }}>Ya</button>
+                                <button className="profile-btn" onClick={() => setCommentToDelete(null)} style={{ fontSize: '10px', padding: '4px 8px', height: '24px' }}>Batal</button>
+                              </div>
+                            ) : (
+                              <button className="comment-action-link" style={{ color: 'var(--color-danger)' }} onClick={() => { setCommentToDelete(reply.id); setCommentReason(''); }}>
+                                Hapus (Mod)
+                              </button>
+                            )
+                          ))}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
               </div>
             );
           })}

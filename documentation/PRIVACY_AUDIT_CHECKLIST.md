@@ -14,7 +14,7 @@
 
 ## 3. API Security
 - [x] CORS is restricted to trusted origins only.
-- [ ] Rate limiting is applied to all endpoints (login, registration, post creation).
+- [x] Rate limiting is applied to all endpoints (login, registration, post creation).
 - [ ] Input validation and sanitization using Zod or custom logic to prevent XSS.
 - [ ] Sensitive headers (e.g. Server, X-Powered-By) are hidden.
 

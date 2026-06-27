@@ -1,45 +1,86 @@
 // functions/api/middleware/rateLimiter.js
 
-const rateLimitMap = new Map();
+// In-memory store (per-isolate, resets on cold start)
+const rateLimitStore = new Map();
 
-// Clear old entries periodically (every 10 minutes)
-setInterval(() => {
+// Cleanup function - dipanggil di dalam handler, bukan global scope
+function cleanupExpired() {
   const now = Date.now();
-  for (const [key, data] of rateLimitMap.entries()) {
+  for (const [key, data] of rateLimitStore.entries()) {
     if (now > data.resetTime) {
-      rateLimitMap.delete(key);
+      rateLimitStore.delete(key);
     }
   }
-}, 10 * 60 * 1000);
+}
 
+// Rate limiter middleware factory
 export function rateLimiter(options = {}) {
-  const windowMs = options.windowMs || 60 * 1000; // default 1 minute
-  const maxRequests = options.maxRequests || 60; // default 60 req/min
-  
-  return async (c, next) => {
-    // Attempt to get client IP from Cloudflare headers
-    const ip = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown-ip';
-    const key = `${ip}-${c.req.path}`;
-    
-    const now = Date.now();
-    
-    if (!rateLimitMap.has(key)) {
-      rateLimitMap.set(key, { count: 1, resetTime: now + windowMs });
-    } else {
-      const data = rateLimitMap.get(key);
-      if (now > data.resetTime) {
-        // Reset window
-        rateLimitMap.set(key, { count: 1, resetTime: now + windowMs });
-      } else {
-        // Increment
-        data.count++;
-        if (data.count > maxRequests) {
-          c.header('Retry-After', Math.ceil((data.resetTime - now) / 1000).toString());
-          return c.json({ error: 'Terlalu banyak permintaan. Silakan coba lagi nanti.' }, 429);
-        }
-      }
+  const {
+    windowMs = 60 * 1000, // 1 minute default
+    maxRequests = 100,
+    keyGenerator = (c) => {
+      // Use IP address as key
+      return c.req.header('CF-Connecting-IP') ||
+        c.req.header('X-Forwarded-For') ||
+        'unknown';
     }
-    
+  } = options;
+
+  return async (c, next) => {
+    // ✅ Cleanup dilakukan di dalam handler, bukan global scope
+    cleanupExpired();
+
+    const key = keyGenerator(c);
+    const now = Date.now();
+
+    let record = rateLimitStore.get(key);
+
+    if (!record || now > record.resetTime) {
+      // Create new record
+      record = {
+        count: 1,
+        resetTime: now + windowMs
+      };
+      rateLimitStore.set(key, record);
+    } else {
+      // Increment existing record
+      record.count++;
+    }
+
+    // Set rate limit headers
+    c.header('X-RateLimit-Limit', maxRequests.toString());
+    c.header('X-RateLimit-Remaining', Math.max(0, maxRequests - record.count).toString());
+    c.header('X-RateLimit-Reset', Math.ceil(record.resetTime / 1000).toString());
+
+    // Check if limit exceeded
+    if (record.count > maxRequests) {
+      const retryAfter = Math.ceil((record.resetTime - now) / 1000);
+      c.header('Retry-After', retryAfter.toString());
+      return c.json(
+        {
+          error: 'Too many requests',
+          retryAfter
+        },
+        429
+      );
+    }
+
     await next();
   };
 }
+
+// Pre-configured rate limiters
+export const globalRateLimiter = rateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 100
+});
+
+export const authRateLimiter = rateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 15
+});
+
+export const apiRateLimiter = rateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 60
+});

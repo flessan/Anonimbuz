@@ -23,7 +23,11 @@ function userToPublicJSON(user, currentUserId = null) {
         facebookUrl: user.facebookUrl || '',
         createdAt: user.createdAt,
         role: user.role,
-        isFollowing: false // Default
+        isFollowing: false, // Default
+        streaks: {
+            current: user.currentStreak || 0,
+            longest: user.longestStreak || 0
+        }
     };
 
     // ✅ Cek isFollowing jika currentUserId diberikan
@@ -270,7 +274,11 @@ usersApp.get('/me/export', authRequired, async (c) => {
                 twitterUrl: user.twitterUrl,
                 facebookUrl: user.facebookUrl,
                 createdAt: user.createdAt,
-                role: user.role
+                role: user.role,
+                streaks: {
+                    current: user.currentStreak,
+                    longest: user.longestStreak
+                }
             },
             posts: user.posts,
             comments: user.comments,

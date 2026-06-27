@@ -31,5 +31,4 @@ Thumbs.db
 
 # Deployment
 .wrangler
-documentation/JUST_DO_IT.md
-
+/documentation
