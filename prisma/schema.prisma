@@ -1,0 +1,329 @@
+// prisma/schema.prisma
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum PostStatus {
+  ACTIVE
+  DELETED
+  REMOVED_BY_MOD
+}
+
+enum NotificationType {
+  LIKE
+  COMMENT
+  FOLLOW
+  REPOST
+  QUOTE
+  MENTION
+}
+
+enum UserRole {
+  user
+  mod
+  dev
+}
+
+// ============================================
+// MODELS
+// ============================================
+
+model User {
+  id             String   @id @default(uuid())
+  username       String   @unique
+  passwordHash   String
+  role           UserRole @default(user)
+  displayName    String?
+  bio            String?  @default("") @db.VarChar(280)
+  githubUrl      String?  @default("") @db.VarChar(255)
+  instagramUrl   String?  @default("") @db.VarChar(255)
+  twitterUrl     String?  @default("") @db.VarChar(255)
+  facebookUrl    String?  @default("") @db.VarChar(255)
+  avatarUrl      String?  @default("")
+  avatarPublicId String?  @default("")
+  bannerUrl      String?  @default("")
+  bannerPublicId String?  @default("")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  posts      Post[]    @relation("UserPosts")
+  comments   Comment[] @relation("UserComments")
+  likedPosts Post[]    @relation("UserLikes")
+
+  // Follow system
+  followers Follow[] @relation("Followers")
+  following Follow[] @relation("Following")
+
+  reposts       Repost[]
+  sentNotif     Notification[] @relation("Sender")
+  receivedNotif Notification[] @relation("Receiver")
+
+  // Moderation
+  removedPosts Post[] @relation("RemovedBy")
+
+  // Bookmark & Block - nama harus match dengan model terkait
+  bookmarks Bookmark[] @relation("UserBookmarks")
+  blockedBy Block[]    @relation("UserBlockedBy")
+  blocking  Block[]    @relation("UserBlocking")
+
+  pollVotes PollVote[]
+  reactions Reaction[]
+
+  @@index([username])
+  @@index([createdAt])
+}
+
+model Follow {
+  id          String   @id @default(uuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("Followers", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@index([createdAt])
+}
+
+model Post {
+  id            String     @id @default(uuid())
+  content       String     @db.VarChar(2000)
+  embedUrl      String?    @default("") @db.VarChar(500)
+  isAnonymous   Boolean    @default(false)
+  anonymousName String?    @default("")
+  isEdited      Boolean    @default(false)
+  isPinned      Boolean    @default(false)
+  pinnedAt      DateTime?
+  embeds        Json?
+  mood          String     @default("default")
+  status        PostStatus @default(ACTIVE)
+
+  // Moderation fields
+  removedReason String?
+  removedAt     DateTime?
+  removedById   String?
+  removedBy     User?     @relation("RemovedBy", fields: [removedById], references: [id], onDelete: SetNull)
+
+  // Soft delete
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Author
+  authorId String
+  author   User   @relation("UserPosts", fields: [authorId], references: [id], onDelete: Cascade)
+
+  // Relations
+  comments Comment[] @relation("PostComments")
+  likedBy  User[]    @relation("UserLikes")
+  tags     Tag[]     @relation("PostTags")
+  reposts  Repost[]
+
+  // Quote Post - self-relation
+  quotedPostId String?
+  quotedPost   Post?   @relation("QuotePosts", fields: [quotedPostId], references: [id], onDelete: SetNull)
+  quotes       Post[]  @relation("QuotePosts")
+
+  notifications Notification[]
+
+  // Bookmark - nama harus match dengan model Bookmark
+  bookmarks Bookmark[] @relation("PostBookmarks")
+
+  poll      Poll?
+  reactions Reaction[]
+
+  @@index([authorId, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@index([status])
+  @@index([quotedPostId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String   @db.VarChar(1000)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Soft delete
+  deletedAt DateTime?
+
+  // Relations
+  postId   String
+  post     Post   @relation("PostComments", fields: [postId], references: [id], onDelete: Cascade)
+  authorId String
+  author   User   @relation("UserComments", fields: [authorId], references: [id], onDelete: Cascade)
+
+  // Balasan bersarang (nested comments)
+  parentId String?
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  Comment[] @relation("CommentReplies")
+
+  @@index([postId, createdAt])
+  @@index([authorId])
+}
+
+model Tag {
+  id         String   @id @default(uuid())
+  name       String
+  slug       String   @unique
+  category   String
+  usageCount Int      @default(0)
+  posts      Post[]   @relation("PostTags")
+  createdAt  DateTime @default(now())
+
+  @@index([slug])
+  @@index([category])
+  @@index([usageCount(sort: Desc)])
+}
+
+model Repost {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([userId])
+  @@index([postId])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  // Relations
+  senderId   String
+  sender     User    @relation("Sender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User    @relation("Receiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  postId     String?
+  post       Post?   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([receiverId, isRead, createdAt(sort: Desc)])
+  @@index([receiverId, createdAt(sort: Desc)])
+  @@index([senderId])
+}
+
+// ============================================
+// BOOKMARK MODEL - nama relation harus match
+// ============================================
+model Bookmark {
+  id        String   @id @default(uuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+
+  // ✅ PERHATIKAN: nama "UserBookmarks" dan "PostBookmarks" harus match
+  user User @relation("UserBookmarks", fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation("PostBookmarks", fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([postId])
+}
+
+// ============================================
+// BLOCK MODEL - nama relation harus match
+// ============================================
+model Block {
+  id        String   @id @default(uuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  // ✅ PERHATIKAN: nama "UserBlocking" dan "UserBlockedBy" harus match dengan User model
+  blocker User @relation("UserBlocking", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("UserBlockedBy", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+}
+
+// ============================================
+// EMBED CACHE MODEL
+// ============================================
+model EmbedCache {
+  id        String   @id @default(uuid())
+  url       String   @unique
+  type      String
+  metadata  Json
+  html      String?
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([url])
+  @@index([expiresAt])
+}
+
+// ============================================
+// POLL MODELS
+// ============================================
+model Poll {
+  id        String       @id @default(uuid())
+  postId    String       @unique
+  post      Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  question  String?
+  expiresAt DateTime
+  options   PollOption[]
+  votes     PollVote[]
+  createdAt DateTime     @default(now())
+}
+
+model PollOption {
+  id     String     @id @default(uuid())
+  pollId String
+  poll   Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  text   String
+  votes  PollVote[]
+}
+
+model PollVote {
+  id       String     @id @default(uuid())
+  pollId   String
+  poll     Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  optionId String
+  option   PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, pollId])
+}
+
+// ============================================
+// REACTION MODEL
+// ============================================
+model Reaction {
+  id        String   @id @default(uuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emoji     String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+  @@index([postId])
+}
+

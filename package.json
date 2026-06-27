@@ -1,0 +1,22 @@
+{
+  "name": "anomia",
+  "version": "0.1.0",
+  "description": "Anomia - Social media REST API (Hono + Prisma)",
+  "main": "functions/api/[[route]].js",
+  "scripts": {
+    "build": "npx prisma generate && npm install --prefix web && npm run build --prefix web",
+    "dev:backend": "wrangler pages dev --port 3000",
+    "prisma:push": "npx prisma db push",
+    "prisma:generate": "npx prisma generate"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.9.4",
+    "@prisma/adapter-neon": "^5.16.1",
+    "@prisma/client": "^5.22.0",
+    "hono": "^4.4.7"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0",
+    "wrangler": "^4.105.0"
+  }
+}
